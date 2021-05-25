@@ -449,10 +449,9 @@ void archiver::un_pack(string path, string dir)
         int c_index = 0;
 		string code;
         read_tree(root_, code, c_index, chars, input, buffer_mask, bit_index);
-	}
+    }
     bit_index = 8;
-
-	CreateDirectoryA(dir.c_str(), 0);
+    CreateDirectoryA(dir.c_str(), 0);
     tree_decompress(root_file_, dir, input, buffer_mask, bit_index);
     free();
 }
