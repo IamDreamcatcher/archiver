@@ -3,23 +3,23 @@
 
 string archiver::get_file(string path) {
     size_t found = path.find_last_of("/\\");
-	return path.substr(found + 1);
+    return path.substr(found + 1);
 }
 
 string archiver::get_path(string path) {
-	size_t found = path.find_last_of("/\\");
-	return path.substr(0, found + 1);
+    size_t found = path.find_last_of("/\\");
+    return path.substr(0, found + 1);
 }
 
 void archiver::make_file_tree(file_node*& current_node, string path, string name, ofstream& output) {
     current_node = new file_node();
 
-	string concat = path + name;
+    string concat = path + name;
     auto isDirectory = GetFileAttributesA((path + name).c_str());
     if (isDirectory == INVALID_FILE_ATTRIBUTES) {
-		output.close();
+        output.close();
         throw (string)"Error reading file for archiving";
-	}
+    }
     if (isDirectory == FILE_ATTRIBUTE_DIRECTORY) {
         current_node -> is_file_ = false;
         current_node -> name_ = name;
@@ -29,20 +29,20 @@ void archiver::make_file_tree(file_node*& current_node, string path, string name
         WIN32_FIND_DATAA find_file_data;
         HANDLE h_find;
 
-		string concat = path + name + "\\*.*";
+        string concat = path + name + "\\*.*";
         h_find = FindFirstFileA((path + name + "\\*.*").c_str(), &find_file_data);
         if (h_find != INVALID_HANDLE_VALUE) {
-			do {
+            do {
                 if (find_file_data.cFileName[0] == '.')
-					continue;
+                    continue;
                 current_node -> files_.push_back(nullptr);
                 make_file_tree(current_node -> files_.back(), path + name + "\\", find_file_data.cFileName, output);
             } while (FindNextFileA(h_find, &find_file_data));
 
             FindClose(h_find);
-		}
+        }
 
-		output << "/>/ ";
+        output << "/>/ ";
     } else {
         current_node -> is_file_ = true;
         current_node -> size_ = add_file(path + name);
@@ -50,7 +50,7 @@ void archiver::make_file_tree(file_node*& current_node, string path, string name
         output << '/' << name << '/' << ' ' << current_node -> size_ << ' ';
 
         current_node -> name_ = name;
-	}
+    }
 }
 
 void archiver::make_tree() {
@@ -63,8 +63,8 @@ void archiver::make_tree() {
     if (nodes.size() == 1) {
         root_ = new node(0, nodes.front() -> amount);
         root_ -> left = nodes.front();
-		return;
-	}
+        return;
+    }
 
     while (nodes.size() > 1) {
         nodes.sort(my_compare());
@@ -76,27 +76,27 @@ void archiver::make_tree() {
 
         node* vertices_union = new node(first, second);
         nodes.push_front(vertices_union);
-	}
+    }
 
     root_ = nullptr;
     if (!nodes.empty()) {
         root_ = nodes.front();
-	}
+    }
 
 }
 
 void archiver::build_table(node* current_node, string& code) {
     if (current_node -> left != nullptr) {
-		code.push_back('0');
+        code.push_back('0');
         build_table(current_node -> left, code);
-		code.pop_back();
-	}
+        code.pop_back();
+    }
 
     if (current_node -> right != nullptr) {
-		code.push_back('1');
+        code.push_back('1');
         build_table(current_node -> right, code);
-		code.pop_back();
-	}
+        code.pop_back();
+    }
 
     if (current_node -> left == nullptr && current_node -> right == nullptr) {
         table_[current_node -> c] = code;
@@ -148,16 +148,16 @@ void archiver::files_compress(file_node*& current_node, string path, ofstream& o
         for (int i = 0; i < (int) current_node -> files_.size(); i++) {
             files_compress(current_node -> files_[i], path + current_node -> name_ + '\\', output, buffer_mask, bit_index);
         }
-	}
+    }
 }
 
 void archiver::compress(string file, ofstream& output, int& buffer_mask, int& bit_index) {
     if (output) {
-		ifstream input(file, std::ios::binary);
+        ifstream input(file, std::ios::binary);
         while (!input.eof()) {
-			int c = input.get();
+            int c = input.get();
             if (c == -1) {
-				break;
+                break;
             }
             for (int j = 0; j < (int)table_[c].size(); j++) {
                 buffer_mask = buffer_mask | ((table_[c][j] - '0') << (7 - bit_index));
@@ -166,16 +166,16 @@ void archiver::compress(string file, ofstream& output, int& buffer_mask, int& bi
                     bit_index = 0;
                     output << (char)buffer_mask;
                     buffer_mask = 0;
-				}
-			}
-		}
-		input.close();
-	}
+                }
+            }
+        }
+        input.close();
+    }
 }
 
 void archiver::delete_tree(node*& current_node) {
     if (current_node == nullptr) {
-		return;
+        return;
     }
     delete_tree(current_node -> left);
     delete_tree(current_node -> right);
@@ -184,7 +184,7 @@ void archiver::delete_tree(node*& current_node) {
 
 void archiver::delete_file_tree(file_node*& current_node) {
     if (current_node == nullptr) {
-		return;
+        return;
     }
     for (int i = 0; i < (int)current_node -> files_.size(); i++) {
         delete_file_tree(current_node -> files_[i]);
@@ -197,59 +197,58 @@ void archiver::read_tree(node*& current_node, string& code, int& c_index, string
     if (bit_index == 8) {
         buffer_mask = input.get();
         if (buffer_mask == -1) {
-			input.close();
+            input.close();
             throw (string)"Unpacking error";
-		}
+        }
         bit_index = 0;
-	}
+    }
     int bit = (buffer_mask >> (7 - bit_index)) & 1;
     bit_index++;
     if (bit == 0) {
-		code.push_back('0');
+        code.push_back('0');
         read_tree(current_node -> left, code, c_index, chars, input, buffer_mask, bit_index);
-		code.pop_back();
+        code.pop_back();
         if (c_index == (int)chars.size())
-			return;
+            return;
 
-		code.push_back('1');
+        code.push_back('1');
         read_tree(current_node -> right, code, c_index, chars, input, buffer_mask, bit_index);
-		code.pop_back();
+        code.pop_back();
     } else {
         current_node -> c = chars[c_index++];
-	}
+    }
 }
 
 bool read_string_name(ifstream& input, string& name) {
-	int size = 256;
+    int size = 256;
     char first_char;
-	name = "";
+    name = "";
     if (input >> first_char) {
         if (first_char != '/') {
-			return false;
+            return false;
         }
         int current_char = input.get();
         if (current_char == '/')
-			return false;
+            return false;
         while (size >= 0 && current_char != '/' && current_char != -1) {
             name += (char)current_char;
-			size--;
+            size--;
             current_char = input.get();
-		}
-        if (current_char == -1 || size < 0) {
-			return false;
         }
-		return true;
-	}
-	return false;
+        if (current_char == -1 || size < 0) {
+            return false;
+        }
+        return true;
+    }
+    return false;
 }
 
-bool archiver::read_file_tree(vector <file_node*>* root_dir, ifstream& input)
-{
-	string name;
-	long long size;
+bool archiver::read_file_tree(vector <file_node*>* root_dir, ifstream& input) {
+    string name;
+    long long size;
     while (read_string_name(input, name)) {
-		if (name == ">")
-			return true;
+        if (name == ">")
+            return true;
 
         if (name.back() == '<') {
             file_node* current_node = new file_node;
@@ -261,14 +260,14 @@ bool archiver::read_file_tree(vector <file_node*>* root_dir, ifstream& input)
                 root_file_ = current_node;
             }
             if (!read_file_tree(&(current_node -> files_), input)) {
-				return false;
+                return false;
             }
             if (root_dir == nullptr) {
-				return true;
+                return true;
             }
         } else {
-			if (!(input >> size))
-				return false;
+            if (!(input >> size))
+                return false;
 
             file_node* current_node = new file_node;
 
@@ -280,25 +279,25 @@ bool archiver::read_file_tree(vector <file_node*>* root_dir, ifstream& input)
                 root_dir -> push_back(current_node);
             } else {
                 root_file_ = current_node;
-				return true;
-			}
-		}
-	}
-	return false;
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 void archiver::tree_decompress(file_node* current_node, string path, ifstream& input, int& buffer_mask, int& bit_index) {
     if (current_node == nullptr) {
         throw (string)"Unpacking error";
-	}
+    }
     if (current_node -> is_file_) {
         decompress(path + current_node -> name_, current_node -> size_, input, buffer_mask, bit_index);
     } else {
         CreateDirectoryA((path + current_node -> name_).c_str(), 0);
         for (int i = 0; i < (int)current_node -> files_.size(); i++) {
-            tree_decompress(current_node -> files_[i], path + current_node -> name_ + '\\', input, buffer_mask, bit_index);
-		}
-	}
+         tree_decompress(current_node -> files_[i], path + current_node -> name_ + '\\', input, buffer_mask, bit_index);
+        }
+    }
 }
 
 void archiver::decompress(string file_path, long long char_cnt, ifstream& input, int& buffer_mask, int& bit_index) {
@@ -309,23 +308,23 @@ void archiver::decompress(string file_path, long long char_cnt, ifstream& input,
 
     if (!output) {
         throw "Error reading file " + get_file(file_path);
-	}
+    }
 
     while (!input.eof() && processed_chars < char_cnt) {
         if (bit_index == 8) {
             bit_index = 0;
             buffer_mask = input.get();
             if (buffer_mask == -1) {
-				break;
+                break;
             }
-		}
+        }
         bool bit = buffer_mask & (1 << (7 - bit_index));
         bit_index++;
 
         if (current_node == NULL) {
-			output.close();
+            output.close();
             throw (string)"Error reading file " + get_file(file_path);
-		}
+        }
         if (bit) {
             current_node = current_node -> right;
         } else {
@@ -335,14 +334,14 @@ void archiver::decompress(string file_path, long long char_cnt, ifstream& input,
             output << current_node -> c;
             current_node = root_;
             processed_chars++;
-		}
-	}
+        }
+    }
     if (processed_chars < char_cnt) {
-		output.close();
+        output.close();
         throw (string)"Error reading file " + get_file(file_path);
-	}
+    }
 
-	output.close();
+    output.close();
 }
 
 archiver::archiver() {
@@ -355,28 +354,27 @@ void archiver::add_path(string path, ofstream& output) {
 }
 
 long long archiver::add_file(string name) {
-
-	ifstream input(name, std::ios::binary);
-	long long readed = 0;
+    ifstream input(name, std::ios::binary);
+    long long readed = 0;
     if (input) {
         while (!input.eof()) {
-			int i = input.get();
+            int i = input.get();
             if (i == -1) {
-				break;
+                break;
             }
             frequencies_[i]++;
-			readed++;
-		}
-	}
-	input.close();
-	return readed;
+            readed++;
+        }
+    }
+    input.close();
+    return readed;
 }
 
 void archiver::pack(string path_from, string path_to) {
     ofstream output(path_to, std::ios::binary);
     if (!output) {
         throw (string)"Unable to create an archive at the specified path";
-	}
+    }
 
     add_path(path_from, output);
 
@@ -384,14 +382,14 @@ void archiver::pack(string path_from, string path_to) {
     if (root_ != NULL) {
         string s;
         build_table(root_, s);
-	}
+    }
 
     long long char_cnt = 0, bits_number = 0;
     for (int i = 0; i < 256; i++) {
         if (frequencies_[i] != 0) {
             char_cnt++;
             bits_number += frequencies_[i] * table_[i].size();
-		}
+        }
     }
     output << char_cnt << ' ';
 
@@ -402,8 +400,8 @@ void archiver::pack(string path_from, string path_to) {
         encode_tree(root_, output, buffer_mask, bit_index, char_count);
         if (bit_index != 0) {
             output << (char)buffer_mask;
-		}
-	}
+        }
+    }
 
     bit_index = 0, buffer_mask = 0;
     files_compress(root_file_, root_path_, output, buffer_mask, bit_index);
@@ -411,43 +409,41 @@ void archiver::pack(string path_from, string path_to) {
         output << (char)buffer_mask;
     }
 
-	output.close();
+    output.close();
     free();
 }
 
-void archiver::un_pack(string path, string dir)
-{
-	ifstream input(path, std::ios::binary);
+void archiver::un_pack(string path, string dir) {
+    ifstream input(path, std::ios::binary);
     int char_cnt;
 
     if (!input) {
         throw (string)"File " + get_file(path) + " failed to open";
-	}
+    }
 
     root_file_ = nullptr;
     if (!read_file_tree(nullptr, input)) {
         throw (string)"Unpacking error";
-	}
-
+    }
     if (!(input >> char_cnt)) {
         throw (string)"Unpacking error";
     }
-	input.get();
-	string chars;
+    input.get();
+    string chars;
 
     for (int i = 0; i < char_cnt; i++) {
-		int c = input.get();
+        int c = input.get();
         if (c == -1) {
             throw (string)"Unpacking error";
-		}
-		chars.push_back(c);
-	}
+        }
+        chars.push_back(c);
+    }
     int buffer_mask = 0;
     int bit_index = 8;
 
     if (char_cnt != 0) {
         int c_index = 0;
-		string code;
+        string code;
         read_tree(root_, code, c_index, chars, input, buffer_mask, bit_index);
     }
     bit_index = 8;

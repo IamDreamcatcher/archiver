@@ -18,8 +18,8 @@ class archiver {
     struct node {
         node* left = NULL;
         node* right = NULL;
-		unsigned char c;
-		long long amount = 0;
+        unsigned char c;
+        long long amount = 0;
 
         node() : left(nullptr), right(nullptr) {}
         node(char c, long long cnt) :c(c), amount(cnt) {}
@@ -27,19 +27,19 @@ class archiver {
             left = left_node;
             right = right_node;
             amount = left_node -> amount + right_node -> amount;
-		}
-	};
+        }
+    };
 
     struct file_node {
         bool is_file_;
         long long size_;
         string name_;
         vector <file_node*> files_;
-	};
+    };
 
     struct my_compare {
         bool operator()(const node* l, const node* r) const { return l -> amount < r -> amount; }
-	};
+    };
 
     void add_path(string path, ofstream &output);
 
